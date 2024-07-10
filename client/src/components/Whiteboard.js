@@ -1,15 +1,20 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useRef, useEffect, useState, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
-import { Box, Button, Slider, Typography, Paper, TextField } from '@mui/material';
+import { Box, Button, Slider, Typography, Paper, TextField, Fade, Zoom } from '@mui/material';
 import { SketchPicker } from 'react-color';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import ChatIcon from '@mui/icons-material/Chat';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
 import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
 
 const Whiteboard = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const canvasRef = useRef(null);
   const socketRef = useRef(null);
   const [color, setColor] = useState('#000000');
@@ -20,8 +25,14 @@ const Whiteboard = () => {
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [whiteboardName, setWhiteboardName] = useState('');
 
   useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
@@ -34,6 +45,7 @@ const Whiteboard = () => {
         const whiteboardData = res.data.data;
         setHistory(whiteboardData);
         setCurrentStep(whiteboardData.length - 1);
+        setWhiteboardName(res.data.name);
         redrawCanvas(whiteboardData);
       } catch (error) {
         console.error('Error fetching whiteboard data:', error);
@@ -83,7 +95,7 @@ const Whiteboard = () => {
     return () => {
       socketRef.current.disconnect();
     };
-  }, [id]);
+  }, [id, user, navigate]);
 
   const drawOnCanvas = (context, data) => {
     const { tool, color, brushSize, x0, y0, x1, y1 } = data;
@@ -128,19 +140,38 @@ const Whiteboard = () => {
   const sendMessage = (e) => {
     e.preventDefault();
     if (newMessage.trim()) {
-      const messageData = { text: newMessage, sender: 'You', timestamp: new Date().toLocaleTimeString() };
+      const messageData = { text: newMessage, sender: user.username, timestamp: new Date().toLocaleTimeString() };
       socketRef.current.emit('send-message', { roomId: id, ...messageData });
       setMessages([...messages, messageData]);
       setNewMessage('');
     }
   };
 
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    setHistory([]);
+    setCurrentStep(-1);
+    socketRef.current.emit('clear-canvas', { roomId: id });
+  };
+
+  const saveWhiteboard = async () => {
+    try {
+      await axios.put(`http://localhost:5000/api/whiteboard/${id}`, { data: history });
+      alert('Whiteboard saved successfully!');
+    } catch (error) {
+      console.error('Error saving whiteboard:', error);
+      alert('Failed to save whiteboard. Please try again.');
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
       <Typography variant="h4" gutterBottom>
-        Whiteboard: {id}
+        Whiteboard: {whiteboardName}
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Button variant={tool === 'pen' ? 'contained' : 'outlined'} onClick={() => setTool('pen')}>
           Pen
         </Button>
@@ -156,47 +187,61 @@ const Whiteboard = () => {
         <Button startIcon={<ChatIcon />} onClick={() => setShowChat(!showChat)}>
           Chat
         </Button>
-        <Paper elevation={3} sx={{ p: 1 }}>
-          <Typography gutterBottom>Brush Size</Typography>
-          <Slider
-            value={brushSize}
-            onChange={(e, newValue) => setBrushSize(newValue)}
-            aria-labelledby="brush-size-slider"
-            valueLabelDisplay="auto"
-            min={1}
-            max={20}
-          />
-        </Paper>
-        <SketchPicker color={color} onChange={(color) => setColor(color.hex)} />
+        <Button startIcon={<DeleteIcon />} onClick={clearCanvas} color="error">
+          Clear
+        </Button>
+        <Button startIcon={<SaveIcon />} onClick={saveWhiteboard} color="success">
+          Save
+        </Button>
+        <Zoom in={true}>
+          <Paper elevation={3} sx={{ p: 1 }}>
+            <Typography gutterBottom>Brush Size</Typography>
+            <Slider
+              value={brushSize}
+              onChange={(e, newValue) => setBrushSize(newValue)}
+              aria-labelledby="brush-size-slider"
+              valueLabelDisplay="auto"
+              min={1}
+              max={20}
+            />
+          </Paper>
+        </Zoom>
+        <Fade in={true}>
+          <Paper elevation={3} sx={{ p: 1 }}>
+            <SketchPicker color={color} onChange={(color) => setColor(color.hex)} />
+          </Paper>
+        </Fade>
       </Box>
       <Box sx={{ display: 'flex', gap: 2 }}>
         <canvas 
           ref={canvasRef} 
           width={800} 
           height={600} 
-          style={{ border: '1px solid #000' }}
+          style={{ border: '1px solid #000', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}
         />
         {showChat && (
-          <Paper elevation={3} sx={{ p: 2, width: 300, height: 600, overflow: 'auto' }}>
-            <Typography variant="h6" gutterBottom>Chat</Typography>
-            <Box sx={{ height: 500, overflowY: 'auto', mb: 2 }}>
-              {messages.map((message, index) => (
-                <Typography key={index} variant="body2">
-                  <strong>{message.sender}:</strong> {message.text} <small>({message.timestamp})</small>
-                </Typography>
-              ))}
-            </Box>
-            <form onSubmit={sendMessage}>
-              <TextField
-                fullWidth
-                variant="outlined"
-                size="small"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-              />
-            </form>
-          </Paper>
+          <Fade in={showChat}>
+            <Paper elevation={3} sx={{ p: 2, width: 300, height: 600, overflow: 'auto' }}>
+              <Typography variant="h6" gutterBottom>Chat</Typography>
+              <Box sx={{ height: 500, overflowY: 'auto', mb: 2 }}>
+                {messages.map((message, index) => (
+                  <Typography key={index} variant="body2">
+                    <strong>{message.sender}:</strong> {message.text} <small>({message.timestamp})</small>
+                  </Typography>
+                ))}
+              </Box>
+              <form onSubmit={sendMessage}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                />
+              </form>
+            </Paper>
+          </Fade>
         )}
       </Box>
     </Box>

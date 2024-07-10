@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { Container, Typography, TextField, Button, Box, Link } from '@mui/material';
-import { AuthContext } from '../contexts/AuthContext';
+import { AuthContext } from '../context/AuthContext';
 
 const Register = () => {
   const [username, setUsername] = useState('');
