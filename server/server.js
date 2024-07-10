@@ -16,11 +16,20 @@ const io = socketIo(server, {
   }
 });
 
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.send('Welcome to the Collaborative Whiteboard API');
+});
+
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
-
-app.use(cors());
-app.use(express.json());
 
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,

@@ -64,9 +64,9 @@ const Whiteboard = () => {
   };
 
   return (
-    <div>
+    <div className="whiteboard-container">
       <h2>Whiteboard: Room {roomId}</h2>
-      <div>
+      <div className="whiteboard-controls">
         <input
           type="color"
           value={color}
@@ -80,7 +80,12 @@ const Whiteboard = () => {
           onChange={(e) => setBrushSize(parseInt(e.target.value))}
         />
       </div>
-      <canvas ref={canvasRef} width={800} height={600} style={{ border: '1px solid black' }} />
+      <canvas 
+        ref={canvasRef} 
+        width={800} 
+        height={600} 
+        className="whiteboard-canvas"
+      />
     </div>
   );
 };

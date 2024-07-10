@@ -1,0 +1,20 @@
+.whiteboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    background-color: #f0f0f0;
+    min-height: 100vh;
+  }
+  
+  .whiteboard-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .whiteboard-canvas {
+    border: 1px solid #ddd;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
