@@ -1,13 +1,13 @@
-  {
-    "name": "your-app-name",
-    "version": "0.1.0",
-    "private": true,
-    "proxy": "http://localhost:5000",
-    "scripts": {
-      "start": "nodemon server.js"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "description": ""
-  }
+{
+  "name": "collaborative-whiteboard-server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
