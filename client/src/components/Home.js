@@ -1,6 +1,6 @@
 import React from 'react';
 import { Container, Typography, Button, Box } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 
 const Home = () => {
   return (
@@ -13,11 +13,11 @@ const Home = () => {
           Create or join a whiteboard room to start collaborating with others in real-time.
         </Typography>
         <Box sx={{ mt: 4 }}>
-          <Button variant="contained" component={Link} to="/whiteboard/new" sx={{ mr: 2 }}>
-            Create New Whiteboard
+          <Button variant="contained" component={RouterLink} to="/whiteboards" sx={{ mr: 2 }}>
+            My Whiteboards
           </Button>
-          <Button variant="outlined" component={Link} to="/login">
-            Join Existing Whiteboard
+          <Button variant="outlined" component={RouterLink} to="/login">
+            Login
           </Button>
         </Box>
       </Box>
