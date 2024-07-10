@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Create AuthContext
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -13,6 +14,7 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           axios.defaults.headers.common['x-auth-token'] = token;
+          // Ensure /verify endpoint exists
           const res = await axios.get('http://localhost:5000/api/auth/verify');
           setUser(res.data.user);
         } catch (error) {
@@ -33,6 +35,7 @@ export const AuthProvider = ({ children }) => {
       console.log('Login payload:', { username, password });
       const res = await axios.post('http://localhost:5000/api/auth/login', { username, password });
       localStorage.setItem('token', res.data.token);
+      console.log('Setting auth token:', res.data.token); // Add this line
       axios.defaults.headers.common['x-auth-token'] = res.data.token;
       setUser(res.data.user);
       return true;

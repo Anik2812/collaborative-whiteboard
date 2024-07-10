@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
-import { Box, Button, Slider, Typography, Paper, TextField, Fade, Zoom } from '@mui/material';
+import { Box, Button, Slider, Typography, Paper, TextField, Grow } from '@mui/material';
 import { SketchPicker } from 'react-color';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -26,6 +26,12 @@ const Whiteboard = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [whiteboardName, setWhiteboardName] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -34,12 +40,13 @@ const Whiteboard = () => {
     }
 
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const context = canvas.getContext('2d');
 
     socketRef.current = io('http://localhost:5000');
     socketRef.current.emit('join-room', id);
 
-    // Add token to axios default headers
     axios.defaults.headers.common['x-auth-token'] = localStorage.getItem('token');
 
     const fetchWhiteboardData = async () => {
@@ -49,7 +56,9 @@ const Whiteboard = () => {
         setHistory(whiteboardData);
         setCurrentStep(whiteboardData.length - 1);
         setWhiteboardName(res.data.name);
-        redrawCanvas(whiteboardData);
+        if (canvas) {
+          redrawCanvas(whiteboardData);
+        }
       } catch (error) {
         if (error.response && error.response.status === 401) {
           console.error('Token expired or not valid. Please log in again.');
@@ -90,18 +99,30 @@ const Whiteboard = () => {
       lastY = y;
     };
 
-    canvas.addEventListener('mousedown', (e) => {
+    const handleMouseDown = (e) => {
       drawing = true;
       const rect = canvas.getBoundingClientRect();
       lastX = e.clientX - rect.left;
       lastY = e.clientY - rect.top;
-    });
+    };
+
+    const handleMouseUp = () => {
+      drawing = false;
+    };
+
+    canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', () => drawing = false);
-    canvas.addEventListener('mouseout', () => drawing = false);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseout', handleMouseUp);
 
     return () => {
-      socketRef.current.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mousemove', draw);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('mouseout', handleMouseUp);
     };
   }, [id, user, navigate]);
 
@@ -118,28 +139,37 @@ const Whiteboard = () => {
   };
 
   const addToHistory = (drawData) => {
-    const newHistory = history.slice(0, currentStep + 1);
-    newHistory.push(drawData);
-    setHistory(newHistory);
-    setCurrentStep(newHistory.length - 1);
+    setHistory(prevHistory => {
+      const newHistory = prevHistory.slice(0, currentStep + 1);
+      newHistory.push(drawData);
+      setCurrentStep(newHistory.length - 1);
+      return newHistory;
+    });
   };
 
   const undo = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-      redrawCanvas(history.slice(0, currentStep));
+      setCurrentStep(prevStep => {
+        const newStep = prevStep - 1;
+        redrawCanvas(history.slice(0, newStep + 1));
+        return newStep;
+      });
     }
   };
 
   const redo = () => {
     if (currentStep < history.length - 1) {
-      setCurrentStep(currentStep + 1);
-      redrawCanvas(history.slice(0, currentStep + 2));
+      setCurrentStep(prevStep => {
+        const newStep = prevStep + 1;
+        redrawCanvas(history.slice(0, newStep + 1));
+        return newStep;
+      });
     }
   };
 
   const redrawCanvas = (steps) => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
     steps.forEach(data => drawOnCanvas(context, data));
@@ -150,13 +180,14 @@ const Whiteboard = () => {
     if (newMessage.trim()) {
       const messageData = { text: newMessage, sender: user.username, timestamp: new Date().toLocaleTimeString() };
       socketRef.current.emit('send-message', { roomId: id, ...messageData });
-      setMessages([...messages, messageData]);
+      setMessages(prevMessages => [...prevMessages, messageData]);
       setNewMessage('');
     }
   };
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
     setHistory([]);
@@ -209,27 +240,29 @@ const Whiteboard = () => {
         <Button startIcon={<SaveIcon />} onClick={saveWhiteboard} color="success">
           Save
         </Button>
-        <Zoom in={true}>
-          <Paper elevation={3} sx={{ p: 1 }}>
-            <Typography gutterBottom>Brush Size</Typography>
-            <Slider
-              value={brushSize}
-              onChange={(e, newValue) => setBrushSize(newValue)}
-              aria-labelledby="brush-size-slider"
-              valueLabelDisplay="auto"
-              min={1}
-              max={20}
-            />
-          </Paper>
-        </Zoom>
-        <Fade in={true}>
-          <SketchPicker
-            color={color}
-            onChangeComplete={(newColor) => setColor(newColor.hex)}
-            disableAlpha
-          />
-        </Fade>
       </Box>
+      {isMounted && (
+        <Grow in={isMounted}>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Paper elevation={3} sx={{ p: 1 }}>
+              <Typography gutterBottom>Brush Size</Typography>
+              <Slider
+                value={brushSize}
+                onChange={(e, newValue) => setBrushSize(newValue)}
+                aria-labelledby="brush-size-slider"
+                valueLabelDisplay="auto"
+                min={1}
+                max={20}
+              />
+            </Paper>
+            <SketchPicker
+              color={color}
+              onChangeComplete={(newColor) => setColor(newColor.hex)}
+              disableAlpha
+            />
+          </Box>
+        </Grow>
+      )}
       <canvas
         ref={canvasRef}
         width={800}

@@ -9,10 +9,19 @@ const WhiteboardList = () => {
   useEffect(() => {
     const fetchWhiteboards = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/whiteboard');
+        const token = localStorage.getItem('token');
+        const config = {
+          headers: { 'x-auth-token': token }
+        };
+        const res = await axios.get('http://localhost:5000/api/whiteboard', config);
         setWhiteboards(res.data);
       } catch (error) {
         console.error('Error fetching whiteboards:', error);
+        if (error.response) {
+          console.error('Response data:', error.response.data);
+          console.error('Response status:', error.response.status);
+          console.error('Response headers:', error.response.headers);
+        }
       }
     };
     fetchWhiteboards();

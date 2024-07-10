@@ -6,6 +6,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User'); // Make sure to create this model
+const authMiddleware = require('../middlewares/auth');
+
 
 // Middleware to verify the token
 const verifyToken = (req, res, next) => {
@@ -20,6 +22,10 @@ const verifyToken = (req, res, next) => {
     res.status(401).json({ msg: 'Token is not valid' });
   }
 };
+
+router.get('/verify', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});
 
 // Login route
 router.post('/login', [

@@ -1,12 +1,12 @@
 const Whiteboard = require('../models/Whiteboard');
 
-exports.getAllWhiteboards = async (req, res) => {
-  console.log('Request received at /api/whiteboard:', req.user);  // Log request user
+exports.getAllWhiteboards = async (userId) => {
   try {
-    const whiteboards = await Whiteboard.find({ user: req.user.id });
-    res.json(whiteboards);
+    const whiteboards = await Whiteboard.find({ user: userId });
+    return whiteboards;
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching whiteboards' });
+    console.error('Error in getAllWhiteboards controller:', error);
+    throw error;
   }
 };
 
