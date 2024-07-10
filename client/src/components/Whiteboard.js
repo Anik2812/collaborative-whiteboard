@@ -39,6 +39,9 @@ const Whiteboard = () => {
     socketRef.current = io('http://localhost:5000');
     socketRef.current.emit('join-room', id);
 
+    // Add token to axios default headers
+    axios.defaults.headers.common['x-auth-token'] = localStorage.getItem('token');
+
     const fetchWhiteboardData = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/whiteboard/${id}`);
@@ -48,7 +51,12 @@ const Whiteboard = () => {
         setWhiteboardName(res.data.name);
         redrawCanvas(whiteboardData);
       } catch (error) {
-        console.error('Error fetching whiteboard data:', error);
+        if (error.response && error.response.status === 401) {
+          console.error('Token expired or not valid. Please log in again.');
+          navigate('/login');
+        } else {
+          console.error('Error fetching whiteboard data:', error);
+        }
       }
     };
 
@@ -158,11 +166,19 @@ const Whiteboard = () => {
 
   const saveWhiteboard = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/whiteboard/${id}`, { data: history });
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:5000/api/whiteboard/${id}`, { data: history }, {
+        headers: { 'x-auth-token': token }
+      });
       alert('Whiteboard saved successfully!');
     } catch (error) {
-      console.error('Error saving whiteboard:', error);
-      alert('Failed to save whiteboard. Please try again.');
+      if (error.response && error.response.status === 401) {
+        console.error('Token expired or not valid. Please log in again.');
+        navigate('/login');
+      } else {
+        console.error('Error saving whiteboard:', error);
+        alert('Failed to save whiteboard. Please try again.');
+      }
     }
   };
 
@@ -207,41 +223,42 @@ const Whiteboard = () => {
           </Paper>
         </Zoom>
         <Fade in={true}>
-          <Paper elevation={3} sx={{ p: 1 }}>
-            <SketchPicker color={color} onChange={(color) => setColor(color.hex)} />
-          </Paper>
+          <SketchPicker
+            color={color}
+            onChangeComplete={(newColor) => setColor(newColor.hex)}
+            disableAlpha
+          />
         </Fade>
       </Box>
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <canvas 
-          ref={canvasRef} 
-          width={800} 
-          height={600} 
-          style={{ border: '1px solid #000', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}
-        />
+      <canvas
+        ref={canvasRef}
+        width={800}
+        height={600}
+        style={{ border: '1px solid #000000', backgroundColor: '#ffffff' }}
+      />
+      <Box sx={{ mt: 2, width: '100%', maxWidth: 800 }}>
         {showChat && (
-          <Fade in={showChat}>
-            <Paper elevation={3} sx={{ p: 2, width: 300, height: 600, overflow: 'auto' }}>
-              <Typography variant="h6" gutterBottom>Chat</Typography>
-              <Box sx={{ height: 500, overflowY: 'auto', mb: 2 }}>
-                {messages.map((message, index) => (
-                  <Typography key={index} variant="body2">
-                    <strong>{message.sender}:</strong> {message.text} <small>({message.timestamp})</small>
-                  </Typography>
-                ))}
-              </Box>
-              <form onSubmit={sendMessage}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  size="small"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                />
-              </form>
-            </Paper>
-          </Fade>
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6">Chat</Typography>
+            <Box sx={{ height: 200, overflowY: 'auto', mb: 2 }}>
+              {messages.map((msg, index) => (
+                <Typography key={index} variant="body2">
+                  <strong>{msg.sender}:</strong> {msg.text} <em>{msg.timestamp}</em>
+                </Typography>
+              ))}
+            </Box>
+            <form onSubmit={sendMessage}>
+              <TextField
+                fullWidth
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message..."
+              />
+              <Button type="submit" variant="contained" color="primary" sx={{ mt: 1 }}>
+                Send
+              </Button>
+            </form>
+          </Paper>
         )}
       </Box>
     </Box>

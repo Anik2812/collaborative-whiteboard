@@ -1,6 +1,7 @@
 const Whiteboard = require('../models/Whiteboard');
 
 exports.getAllWhiteboards = async (req, res) => {
+  console.log('Request received at /api/whiteboard:', req.user);  // Log request user
   try {
     const whiteboards = await Whiteboard.find({ user: req.user.id });
     res.json(whiteboards);
@@ -10,6 +11,7 @@ exports.getAllWhiteboards = async (req, res) => {
 };
 
 exports.getWhiteboard = async (req, res) => {
+  console.log('Request received at /api/whiteboard/:id:', req.params.id, req.user);  // Log request params and user
   try {
     const whiteboard = await Whiteboard.findById(req.params.id);
     if (!whiteboard) {
@@ -22,6 +24,7 @@ exports.getWhiteboard = async (req, res) => {
 };
 
 exports.createWhiteboard = async (req, res) => {
+  console.log('Request received at /api/whiteboard [POST]:', req.body, req.user);  // Log request body and user
   try {
     const { name } = req.body;
     const whiteboard = new Whiteboard({
