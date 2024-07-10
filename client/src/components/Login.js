@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { Container, Typography, TextField, Button, Box, Link } from '@mui/material';
+import { Container, Typography, TextField, Button, Box, Link, Alert } from '@mui/material';
 import { AuthContext } from '../context/AuthContext';
 
 const Login = () => {
@@ -17,7 +17,7 @@ const Login = () => {
     if (success) {
       navigate('/whiteboards');
     } else {
-      setError('Invalid credentials. Please try again.');
+      setError('Login failed. Please check your credentials and try again.');
     }
   };
 
@@ -56,9 +56,9 @@ const Login = () => {
             Sign In
           </Button>
           {error && (
-            <Typography color="error" align="center">
+            <Alert severity="error" sx={{ mt: 2 }}>
               {error}
-            </Typography>
+            </Alert>
           )}
           <Link component={RouterLink} to="/register" variant="body2">
             {"Don't have an account? Sign Up"}

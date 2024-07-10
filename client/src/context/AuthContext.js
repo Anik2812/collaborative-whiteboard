@@ -30,13 +30,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
+      console.log('Login payload:', { username, password });
       const res = await axios.post('http://localhost:5000/api/auth/login', { username, password });
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['x-auth-token'] = res.data.token;
       setUser(res.data.user);
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error.response ? error.response.data : error.message);
       return false;
     }
   };
@@ -49,13 +50,14 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, password) => {
     try {
+      console.log('Register payload:', { username, password });
       const res = await axios.post('http://localhost:5000/api/auth/register', { username, password });
       localStorage.setItem('token', res.data.token);
       axios.defaults.headers.common['x-auth-token'] = res.data.token;
       setUser(res.data.user);
       return true;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error:', error.response ? error.response.data : error.message);
       return false;
     }
   };

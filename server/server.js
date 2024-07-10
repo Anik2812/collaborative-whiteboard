@@ -4,8 +4,16 @@ const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { body, validationResult } = require('express-validator');
 
 dotenv.config();
+
+const corsOptions = {
+  origin: "http://localhost:3000",
+  methods: ["GET", "POST"],
+  credentials: true,
+  optionsSuccessStatus: 204
+};
 
 const app = express();
 const server = http.createServer(app);
@@ -15,7 +23,16 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   }
 });
+app.use(cors(corsOptions));
 
+app.use((req, res, next) => {
+  console.log('Incoming request:', req.method, req.path, req.body);
+  next();
+});
+
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is working' });
+});
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -34,6 +51,12 @@ const whiteboardRoutes = require('./routes/whiteboard');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/whiteboard', whiteboardRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
+});
 
 // Socket.IO
 require('./socket')(io);
